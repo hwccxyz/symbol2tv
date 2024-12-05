@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView List 轉換器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>TradingView List 轉換器</h1>
+        
+        <div class="input-section">
+            <form id="processorForm">
+                <div class="form-group">
+                    <label for="inputText">請輸入交易對文本：</label>
+                    <textarea id="inputText" rows="8" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="fileInput">或上傳交易數據文件：</label>
+                    <input type="file" id="fileInput" accept=".txt">
+                </div>
+                <button type="submit">匯入</button>
+            </form>
+        </div>
+
+        <div class="history-section">
+            <h2>歷史記錄</h2>
+            <div class="download-section">
+                <div class="input-row">
+                    <label for="downloadDays">匯出天數：</label>
+                    <input type="number" id="downloadDays" min="1" max="365" value="14">
+                </div>
+                <div class="download-buttons">
+                    <button id="downloadLatest" disabled>匯出最新一筆資料</button>
+                    <button id="downloadCustom" disabled>匯出指定天數資料</button>
+                </div>
+            </div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>

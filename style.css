@@ -1,0 +1,183 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-color: #0E1117;
+    --text-color: #FAFAFA;
+    --primary-color: #FF4B4B;
+    --border-color: #1E2329;
+    --date-color: #00FF00;
+    --crypto-color: #FFD700;
+    --input-bg: rgba(255, 255, 255, 0.08);
+    --output-bg: rgba(0, 0, 0, 0.5);
+    --terminal-prompt: #00FF00;
+}
+
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+}
+
+.input-section {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background-color: var(--input-bg);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    font-family: 'Space Mono', monospace;
+    resize: vertical;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.download-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.download-section .input-row {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    margin-bottom: 12px !important;
+    gap: 8px !important;
+}
+
+.download-section .input-row label {
+    display: inline-block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+}
+
+.download-section .input-row input[type="number"] {
+    display: inline-block !important;
+    width: 80px !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+}
+
+/* 移除其他可能影響布局的樣式 */
+.download-section > * {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+.history-item {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 1rem;
+}
+
+.history-item pre {
+    background-color: var(--output-bg);
+    padding: 15px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 10px 0;
+    font-family: 'Space Mono', monospace;
+    position: relative;
+    border: 1px solid var(--border-color);
+}
+
+.history-item pre::before {
+    content: ">";
+    color: var(--terminal-prompt);
+    position: absolute;
+    left: 5px;
+    top: 15px;
+}
+
+.history-item pre code {
+    margin-left: 15px;
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+}
+
+.date-highlight {
+    color: var(--date-color);
+    font-weight: bold;
+}
+
+.crypto-highlight {
+    color: var(--crypto-color);
+    font-weight: bold;
+}
+
+.history-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.delete-btn {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    padding: 5px 10px;
+    font-size: 0.9em;
+}
