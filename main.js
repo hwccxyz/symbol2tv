@@ -14,75 +14,63 @@ class CryptoProcessor {
     }
 
     static extractSymbols(text) {
+        // 第一種情況：格式化數據
+        if (text.startsWith('###')) {
+            const parts = text.split(',');
+            if (parts.length > 1) {
+                return parts.slice(1).filter(symbol => symbol.trim());
+            }
+        }
+
+        // 第二種情況：非格式化數據
         const lines = text.split('\n');
-        const symbols = [];
-        const seenSymbols = new Set();
-        let currentDate = null;
-        let symbolsForCurrentDate = new Set();
+        let firstDate = null;
+        const allSymbols = new Set();
 
+        // 首先尋找第一個日期
         for (const line of lines) {
-            // 檢查是否有新的日期標記
-            const dateMatch = line.match(/(?:🗓️|🗓|:spiral_calendar_pad:)[\s\n]*(\d{8})|###(\d{8})/);
+            const dateMatch = line.match(/(?:🗓️|🗓|:spiral_calendar_pad:)[\s\n]*(\d{8})/);
             if (dateMatch) {
-                // 如果找到新日期，且與當前日期不同，則更新 currentDate
-                const newDate = dateMatch[1] || dateMatch[2];
-                if (newDate !== currentDate) {
-                    // 將之前日期的符號加入結果
-                    if (currentDate && symbolsForCurrentDate.size > 0) {
-                        symbols.push(...Array.from(symbolsForCurrentDate));
-                    }
-                    currentDate = newDate;
-                    symbolsForCurrentDate = new Set();
-                }
+                firstDate = dateMatch[1];
+                break;  // 只取第一個日期
             }
+        }
 
-            // 移除表情符號和特殊字符，保留逗號
-            const cleanLine = line.replace(/[🔸🗓️]|:[a-z_]+:/g, '').trim();
-            
+        if (!firstDate) return [];
+
+        // 處理所有行，收集所有符號
+        for (const line of lines) {
+            // 清理行內容
+            let cleanLine = line
+                .replace(/[🔸🗓️]|:[a-z_]+:|族群：|強勢|次強勢|標的篩選/g, '')
+                .replace(/[，]/g, ',')
+                .trim();
+
+            if (!cleanLine) continue;
+
             // 分割並處理每個交易對
-            const pairs = cleanLine.split(/[,，\s]+/).filter(p => p.trim());  // 添加中文逗號支援
-            
+            const pairs = cleanLine.split(/[,\s]+/)
+                .map(p => p.trim())
+                .filter(p => p && 
+                       p !== 'RS' && 
+                       !/^###\d{8}$/.test(p) && 
+                       !/^\d{8}$/.test(p));  // 排除純數字（日期）
+
             for (const pair of pairs) {
-                const trimmedPair = pair.trim();
-                
-                // 跳過空字串或無效輸入
-                if (!trimmedPair || trimmedPair === '#N/A' || /^###\d{8}$/.test(trimmedPair)) continue;
-                
-                // 如果是已格式化的交易對，直接使用
-                if (trimmedPair.startsWith('BINANCE:') && trimmedPair.endsWith('USDT.P')) {
-                    symbolsForCurrentDate.add(trimmedPair);
-                    continue;
-                }
-                
-                // 處理未格式化的交易對
-                let symbolPart = trimmedPair;
-                if (trimmedPair.includes('：') || trimmedPair.includes(':')) {
-                    const parts = trimmedPair.split(/[：:]/);
-                    symbolPart = parts[parts.length - 1];
-                }
-
-                const cleanSymbol = symbolPart.trim();
-
-                // 驗證符號有效性
-                if (cleanSymbol && 
-                    cleanSymbol.length >= 2 &&  // 添加最小長度限制
-                    !/[：:()[\]{}]/.test(cleanSymbol) && 
-                    !/[一-鿿]/.test(cleanSymbol) &&
-                    /^[A-Z]+$/.test(cleanSymbol) &&  // 修改為只允許大寫字母
-                    !/^\d+$/.test(cleanSymbol)) {
-                    
-                    const formattedSymbol = `BINANCE:${cleanSymbol}USDT.P`;
-                    symbolsForCurrentDate.add(formattedSymbol);
+                if (pair && 
+                    pair.length >= 2 && 
+                    /^[A-Z]+$/.test(pair)) {
+                    const formattedSymbol = `BINANCE:${pair}USDT.P`;
+                    allSymbols.add(formattedSymbol);
+                    console.log(`添加符號: ${formattedSymbol}`);
                 }
             }
         }
 
-        // 處理最後一組符號
-        if (currentDate && symbolsForCurrentDate.size > 0) {
-            symbols.push(...Array.from(symbolsForCurrentDate));
-        }
-
-        return symbols;
+        console.log(`使用日期: ${firstDate}`);
+        console.log(`總共找到 ${allSymbols.size} 個符號`);
+        
+        return Array.from(allSymbols);
     }
 
     static formatOutput(date, symbols) {
@@ -90,9 +78,12 @@ class CryptoProcessor {
     }
 
     static splitMultipleRecords(text) {
-        // 分割多筆資料
-        const records = text.split(/\n(?=###)/);
-        return records.map(record => record.trim()).filter(record => record);
+        // 使用正則表達式找出所有以 ### 開頭的記錄
+        const records = text.split(/(?=###\d{8})/);
+        // 過濾掉空記錄並去除前後空白
+        return records
+            .map(record => record.trim())
+            .filter(record => record && record.startsWith('###'));
     }
 
     static processInput(inputText) {
@@ -100,20 +91,49 @@ class CryptoProcessor {
             const records = this.splitMultipleRecords(inputText);
             const results = [];
             
-            for (const record of records) {
-                const date = this.extractDate(record);
-                const symbols = this.extractSymbols(record);
-                const output = this.formatOutput(date, symbols);
-                results.push({ output, date });
+            // 如果不是以 ### 開頭的格式，將整個輸入視為單個記錄
+            if (!inputText.trim().startsWith('###')) {
+                try {
+                    const date = this.extractDate(inputText);
+                    const symbols = this.extractSymbols(inputText);
+                    console.log('提取的日期:', date); // 調試信息
+                    console.log('提取的符號:', symbols); // 調試信息
+                    
+                    if (symbols && symbols.length > 0) {
+                        const output = this.formatOutput(date, symbols);
+                        results.push({ output, date });
+                    }
+                } catch (error) {
+                    console.error('處理輸入時發生錯誤:', error); // 調試信息
+                    throw error;
+                }
+            } else {
+                // 處理多個記錄的情況
+                for (const record of records) {
+                    if (!record || record.trim() === '') continue;
+                    
+                    try {
+                        const date = this.extractDate(record);
+                        const symbols = this.extractSymbols(record);
+                        
+                        if (symbols && symbols.length > 0) {
+                            const output = this.formatOutput(date, symbols);
+                            results.push({ output, date });
+                        }
+                    } catch (recordError) {
+                        console.error('處理單筆記錄時發生錯誤:', recordError);
+                        continue;
+                    }
+                }
             }
             
-            // 如果沒有有效記錄，拋出錯誤
             if (results.length === 0) {
                 throw new Error("沒有找到有效的交易數據");
             }
             
             return { outputs: results, warning: "" };
         } catch (e) {
+            console.error('處理過程中發生錯誤:', e); // 調試信息
             return { outputs: [], warning: `Error: ${e.message}` };
         }
     }
@@ -180,7 +200,15 @@ form.addEventListener('submit', (e) => {
     }
 });
 
+function formatDate(dateString) {
+    // 將 YYYYMMDD 格式轉換為 YYYY-MM-DD
+    return `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
+}
+
 function updateHistoryDisplay() {
+    // 首先對歷史記錄進行排序
+    history.sort((a, b) => parseInt(b.date) - parseInt(a.date));
+    
     historyList.innerHTML = '';
     downloadLatestBtn.disabled = history.length === 0;
     downloadCustomBtn.disabled = history.length === 0;
@@ -188,8 +216,9 @@ function updateHistoryDisplay() {
     history.forEach((item, index) => {
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item';
-        // 高亮顯示日期和加密貨幣符號
-        const highlightedDate = `<span class="date-highlight">${item.date}</span>`;
+        // 使用新的日期格式
+        const formattedDate = formatDate(item.date);
+        const highlightedDate = `<span class="date-highlight">${formattedDate}</span>`;
         const highlightedOutput = item.output.replace(
             /(BINANCE:)([A-Z]+)(USDT\.P)/g, 
             '$1<span class="crypto-highlight">$2</span>$3'
@@ -247,3 +276,5 @@ function downloadFile(filename, content) {
     element.click();
     document.body.removeChild(element);
 }
+
+
