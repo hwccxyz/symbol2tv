@@ -1,6 +1,6 @@
 # TradingView 交易數據處理工具
 
-這是一個專門用於處理和格式化交易數據的網頁工具，可訪問：[symbol2tv.hwcc.xyz](https://symbol2tv.hwcc.xyz/)。它可以從不同格式的輸入中提取交易對資訊，並轉換成 TradingView 可用的標準化格式。
+這是一個專門用於處理和格式化交易數據的網頁工具，可訪問：[sym2tv.hwcc.xyz](https://sym2tv.hwcc.xyz/)。它可以從不同格式的輸入中提取交易對資訊，並轉換成 TradingView 可用的標準化格式。
 
 ## 功能特點
 
@@ -17,7 +17,7 @@
 
 ### 使用步驟
 
-1. 訪問 [symbol2tv.hwcc.xyz](https://symbol2tv.hwcc.xyz/)
+1. 訪問 [sym2tv.hwcc.xyz](https://sym2tv.hwcc.xyz/)
 2. 在文本框中輸入數據或上傳文件
 3. 點擊「處理」按鈕
 4. 系統會自動處理並儲存結果
