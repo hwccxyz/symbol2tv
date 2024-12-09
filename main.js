@@ -59,7 +59,7 @@ class CryptoProcessor {
             for (const pair of pairs) {
                 if (pair && 
                     pair.length >= 2 && 
-                    /^[A-Z]+$/.test(pair)) {
+                    /^[A-Z0-9]+$/.test(pair)) {
                     const formattedSymbol = `BINANCE:${pair}USDT.P`;
                     allSymbols.add(formattedSymbol);
                     console.log(`添加符號: ${formattedSymbol}`);
@@ -121,7 +121,7 @@ class CryptoProcessor {
                             results.push({ output, date });
                         }
                     } catch (recordError) {
-                        console.error('處理單筆記錄時發生錯誤:', recordError);
+                        console.error('處理單筆記錄時發生錯���:', recordError);
                         continue;
                     }
                 }
