@@ -121,7 +121,7 @@ class CryptoProcessor {
                             results.push({ output, date });
                         }
                     } catch (recordError) {
-                        console.error('處理單筆記錄時發生錯���:', recordError);
+                        console.error('處理單筆記錄時發生錯誤:', recordError);
                         continue;
                     }
                 }
@@ -216,12 +216,18 @@ function updateHistoryDisplay() {
     history.forEach((item, index) => {
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item';
-        // 使用新的日期格式
         const formattedDate = formatDate(item.date);
         const highlightedDate = `<span class="date-highlight">${formattedDate}</span>`;
+        
+        // 改進符號高亮顯示邏輯
         const highlightedOutput = item.output.replace(
-            /(BINANCE:)([A-Z]+)(USDT\.P)/g, 
-            '$1<span class="crypto-highlight">$2</span>$3'
+            /(###\d{8},|BINANCE:)([A-Z0-9]+)(USDT\.P)/g, 
+            (match, prefix, symbol, suffix) => {
+                if (prefix === '###' + item.date + ',') {
+                    return match;
+                }
+                return `${prefix}<span class="crypto-highlight">${symbol}</span>${suffix}`;
+            }
         );
 
         historyItem.innerHTML = `
