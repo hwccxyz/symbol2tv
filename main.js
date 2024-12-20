@@ -1,6 +1,6 @@
 class CryptoProcessor {
     static extractDate(text) {
-        // 支援兩種格式：1. 帶有 emoji 的格式 2. ###YYYYMMDD 格式
+        // Support two formats: 1. Format with emoji 2. ###YYYYMMDD format
         const emojiMatch = text.match(/(?:🗓️|🗓|:spiral_calendar_pad:)[\s\n]*(\d{8})/);
         const hashMatch = text.match(/###(\d{8})/);
         
@@ -10,11 +10,11 @@ class CryptoProcessor {
             return hashMatch[1];
         }
         
-        throw new Error("無效的日期格式。支援的格式：\n1. 🗓️/🗓 YYYYMMDD\n2. ###YYYYMMDD");
+        throw new Error("Invalid date format. Supported formats:\n1. 🗓️/🗓 YYYYMMDD\n2. ###YYYYMMDD");
     }
 
     static extractSymbols(text) {
-        // 第一種情況：格式化數據
+        // Case 1: Formatted data
         if (text.startsWith('###')) {
             const parts = text.split(',');
             if (parts.length > 1) {
@@ -22,25 +22,25 @@ class CryptoProcessor {
             }
         }
 
-        // 第二種情況：非格式化數據
+        // Case 2: Unformatted data
         const lines = text.split('\n');
         let firstDate = null;
         const allSymbols = new Set();
 
-        // 首先尋找第一個日期
+        // First find the first date
         for (const line of lines) {
             const dateMatch = line.match(/(?:🗓️|🗓|:spiral_calendar_pad:)[\s\n]*(\d{8})/);
             if (dateMatch) {
                 firstDate = dateMatch[1];
-                break;  // 只取第一個日期
+                break;  // Only take the first date
             }
         }
 
         if (!firstDate) return [];
 
-        // 處理所有行，收集所有符號
+        // Process all lines and collect all symbols
         for (const line of lines) {
-            // 清理行內容
+            // Clean line content
             let cleanLine = line
                 .replace(/[🔸🗓️]|:[a-z_]+:|族群：|強勢|次強勢|標的篩選/g, '')
                 .replace(/[，]/g, ',')
@@ -48,13 +48,13 @@ class CryptoProcessor {
 
             if (!cleanLine) continue;
 
-            // 分割並處理每個交易對
+            // Split and process each trading pair
             const pairs = cleanLine.split(/[,\s]+/)
                 .map(p => p.trim())
                 .filter(p => p && 
                        p !== 'RS' && 
                        !/^###\d{8}$/.test(p) && 
-                       !/^\d{8}$/.test(p));  // 排除純數字（日期）
+                       !/^\d{8}$/.test(p));  // Exclude pure numbers (dates)
 
             for (const pair of pairs) {
                 if (pair && 
@@ -62,13 +62,13 @@ class CryptoProcessor {
                     /^[A-Z0-9]+$/.test(pair)) {
                     const formattedSymbol = `BINANCE:${pair}USDT.P`;
                     allSymbols.add(formattedSymbol);
-                    console.log(`添加符號: ${formattedSymbol}`);
+                    console.log(`Added symbol: ${formattedSymbol}`);
                 }
             }
         }
 
-        console.log(`使用日期: ${firstDate}`);
-        console.log(`總共找到 ${allSymbols.size} 個符號`);
+        console.log(`Using date: ${firstDate}`);
+        console.log(`Found total ${allSymbols.size} symbols`);
         
         return Array.from(allSymbols);
     }
@@ -78,9 +78,9 @@ class CryptoProcessor {
     }
 
     static splitMultipleRecords(text) {
-        // 使用正則表達式找出所有以 ### 開頭的記錄
+        // Use regex to find all records starting with ###
         const records = text.split(/(?=###\d{8})/);
-        // 過濾掉空記錄並去除前後空白
+        // Filter out empty records and trim whitespace
         return records
             .map(record => record.trim())
             .filter(record => record && record.startsWith('###'));
@@ -91,24 +91,24 @@ class CryptoProcessor {
             const records = this.splitMultipleRecords(inputText);
             const results = [];
             
-            // 如果不是以 ### 開頭的格式，將整個輸入視為單個記錄
+            // If not starting with ###, treat entire input as single record
             if (!inputText.trim().startsWith('###')) {
                 try {
                     const date = this.extractDate(inputText);
                     const symbols = this.extractSymbols(inputText);
-                    console.log('提取的日期:', date); // 調試信息
-                    console.log('提取的符號:', symbols); // 調試信息
+                    console.log('Extracted date:', date); // Debug info
+                    console.log('Extracted symbols:', symbols); // Debug info
                     
                     if (symbols && symbols.length > 0) {
                         const output = this.formatOutput(date, symbols);
                         results.push({ output, date });
                     }
                 } catch (error) {
-                    console.error('處理輸入時發生錯誤:', error); // 調試信息
+                    console.error('Error processing input:', error); // Debug info
                     throw error;
                 }
             } else {
-                // 處理多個記錄的情況
+                // Handle multiple records
                 for (const record of records) {
                     if (!record || record.trim() === '') continue;
                     
@@ -121,19 +121,19 @@ class CryptoProcessor {
                             results.push({ output, date });
                         }
                     } catch (recordError) {
-                        console.error('處理單筆記錄時發生錯誤:', recordError);
+                        console.error('Error processing single record:', recordError);
                         continue;
                     }
                 }
             }
             
             if (results.length === 0) {
-                throw new Error("沒有找到有效的交易數據");
+                throw new Error("No valid trading data found");
             }
             
             return { outputs: results, warning: "" };
         } catch (e) {
-            console.error('處理過程中發生錯誤:', e); // 調試信息
+            console.error('Error during processing:', e); // Debug info
             return { outputs: [], warning: `Error: ${e.message}` };
         }
     }
@@ -159,7 +159,7 @@ fileInput.addEventListener('change', async (e) => {
             const text = await file.text();
             document.getElementById('inputText').value = text;
         } catch (error) {
-            alert('讀取文件時發生錯誤：' + error.message);
+            alert('Error reading file: ' + error.message);
         }
     }
 });
@@ -169,7 +169,7 @@ form.addEventListener('submit', (e) => {
     const inputText = document.getElementById('inputText').value;
 
     if (!inputText) {
-        alert('請輸入文本內容或上傳文件');
+        alert('Please enter text content or upload a file');
         return;
     }
 
@@ -180,15 +180,15 @@ form.addEventListener('submit', (e) => {
     }
 
     if (outputs.length > 0) {
-        // 將每筆資料分別加入歷史記錄
+        // Add each record to history separately
         outputs.forEach(({ output, date }) => {
-            // 檢查是否已存在相同日期的記錄
+            // Check if record with same date exists
             const existingIndex = history.findIndex(item => item.date === date);
             if (existingIndex !== -1) {
-                // 更新既有記錄
+                // Update existing record
                 history[existingIndex] = { date, output };
             } else {
-                // 新增記錄
+                // Add new record
                 history.unshift({ date, output });
             }
         });
@@ -201,12 +201,12 @@ form.addEventListener('submit', (e) => {
 });
 
 function formatDate(dateString) {
-    // 將 YYYYMMDD 格式轉換為 YYYY-MM-DD
+    // Convert YYYYMMDD format to YYYY-MM-DD
     return `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
 }
 
 function updateHistoryDisplay() {
-    // 首先對歷史記錄進行排序
+    // Sort history records first
     history.sort((a, b) => parseInt(b.date) - parseInt(a.date));
     
     historyList.innerHTML = '';
@@ -219,7 +219,7 @@ function updateHistoryDisplay() {
         const formattedDate = formatDate(item.date);
         const highlightedDate = `<span class="date-highlight">${formattedDate}</span>`;
         
-        // 改進符號高亮顯示邏輯
+        // Improve symbol highlighting logic
         const highlightedOutput = item.output.replace(
             /(###\d{8},|BINANCE:)([A-Z0-9]+)(USDT\.P)/g, 
             (match, prefix, symbol, suffix) => {
@@ -258,12 +258,12 @@ downloadCustomBtn.addEventListener('click', () => {
     if (history.length > 0) {
         const days = parseInt(downloadDaysInput.value) || 14;
         if (days < 1 || days > 365) {
-            alert('請輸入有效的天數（1-365天）');
+            alert('Please enter a valid number of days (1-365)');
             return;
         }
         const customData = history.slice(0, days);
         if (customData.length === 0) {
-            alert('沒有足夠的歷史資料');
+            alert('Not enough historical data');
             return;
         }
         const combinedOutput = customData.map(item => item.output).join('\n');
