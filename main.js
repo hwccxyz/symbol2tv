@@ -14,28 +14,33 @@ class CryptoProcessor {
     }
 
     static extractSymbols(text) {
-        // Case 1: Simple format (date followed by symbols)
-        if (text.match(/###\d{8}\s+[\w\s,]+/)) {
+        // Case 1: Pre-formatted TradingView symbols
+        if (text.includes('BINANCE:') && text.includes('USDT.P')) {
+            const lines = text.split('\n');
             const allSymbols = new Set();
-            // Remove the date part and split the remaining text
-            const symbolsPart = text.replace(/###\d{8}/, '').trim();
             
-            const symbols = symbolsPart.split(',')
-                .map(s => s.trim())
-                .filter(s => s && s.length >= 2 && /^[A-Z0-9]+$/.test(s))
-                .map(s => `BINANCE:${s}USDT.P`);
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                
+                // Get symbols from the line
+                const symbols = line.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s && s.startsWith('BINANCE:') && s.endsWith('USDT.P'));
+                
+                if (symbols.length > 0) {
+                    symbols.forEach(s => {
+                        allSymbols.add(s);
+                        console.log(`Added symbol: ${s}`);
+                    });
+                }
+            }
             
-            symbols.forEach(s => {
-                allSymbols.add(s);
-                console.log(`Added symbol: ${s}`);
-            });
-            
-            console.log(`Found total ${allSymbols.size} symbols in simple format`);
+            console.log(`Found total ${allSymbols.size} pre-formatted symbols`);
             return Array.from(allSymbols);
         }
 
-        // Case 2: Format with score categories
-        if (text.includes('#90+') || text.includes('#80+') || text.includes('#others')) {
+        // Case 2: Formats starting with ### (Simple date format, Categorized format, Original formatted data)
+        if (text.startsWith('###')) {
             const allSymbols = new Set();
             const lines = text.split('\n');
             
@@ -43,11 +48,18 @@ class CryptoProcessor {
                 // Skip empty lines and date lines
                 if (!line.trim() || line.startsWith('###')) continue;
                 
-                // If it's a category line (starts with #), skip it
-                if (line.trim().startsWith('#')) continue;
+                // Process line content
+                let processLine = line;
+                
+                // If line starts with category (#), remove the category part
+                if (line.trim().startsWith('#')) {
+                    const categoryParts = line.split(',');
+                    // Remove the category part (first element)
+                    processLine = categoryParts.slice(1).join(',');
+                }
                 
                 // Process symbols in the line
-                const symbols = line.split(',')
+                const symbols = processLine.split(',')
                     .map(s => s.trim())
                     .filter(s => s && s.length >= 2 && /^[A-Z0-9]+$/.test(s))
                     .map(s => `BINANCE:${s}USDT.P`);
@@ -58,25 +70,11 @@ class CryptoProcessor {
                 });
             }
             
-            console.log(`Found total ${allSymbols.size} symbols in categorized format`);
+            console.log(`Found total ${allSymbols.size} symbols in ### format`);
             return Array.from(allSymbols);
         }
 
-        // Case 3: Original formatted data
-        if (text.startsWith('###')) {
-            const parts = text.split(',');
-            if (parts.length > 1) {
-                return parts.slice(1)
-                    .filter(symbol => symbol.trim())
-                    .map(symbol => {
-                        const formatted = `BINANCE:${symbol.trim()}USDT.P`;
-                        console.log(`Added symbol: ${formatted}`);
-                        return formatted;
-                    });
-            }
-        }
-
-        // Case 4: Original unformatted data
+        // Case 3: Original unformatted data (with emoji)
         const lines = text.split('\n');
         let firstDate = null;
         const allSymbols = new Set();
@@ -171,7 +169,8 @@ class CryptoProcessor {
                         const symbols = this.extractSymbols(record);
                         
                         if (symbols && symbols.length > 0) {
-                            const output = this.formatOutput(date, symbols);
+                            // For pre-formatted TradingView symbols, keep the original format
+                            const output = record.includes('BINANCE:') ? record : this.formatOutput(date, symbols);
                             results.push({ output, date });
                         }
                     } catch (recordError) {
@@ -205,10 +204,16 @@ let history = JSON.parse(localStorage.getItem('history') || '[]');
 updateHistoryDisplay();
 
 const fileInput = document.getElementById('fileInput');
+fileInput.accept = '.txt';
 
 fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (!file.name.toLowerCase().endsWith('.txt')) {
+            alert('Please upload a text (.txt) file only');
+            fileInput.value = '';
+            return;
+        }
         try {
             const text = await file.text();
             document.getElementById('inputText').value = text;
@@ -315,15 +320,27 @@ downloadCustomBtn.addEventListener('click', () => {
             alert('Please enter a valid number of days (1-365)');
             return;
         }
-        const customData = history.slice(0, days);
+        
+        // Check if we have enough data
+        if (history.length < days) {
+            const proceed = confirm(`You requested ${days} days of data, but only ${history.length} days are available. Do you want to proceed with the available ${history.length} days?`);
+            if (!proceed) {
+                return;
+            }
+        }
+        
+        const customData = history.slice(0, Math.min(days, history.length));
         if (customData.length === 0) {
-            alert('Not enough historical data');
+            alert('No historical data available');
             return;
         }
+        
         const combinedOutput = customData.map(item => item.output).join('\n');
         const startDate = customData[customData.length - 1].date;
         const endDate = customData[0].date;
         downloadFile(`tv_${startDate}-${endDate}.txt`, combinedOutput);
+    } else {
+        alert('No historical data available');
     }
 });
 
@@ -336,5 +353,3 @@ function downloadFile(filename, content) {
     element.click();
     document.body.removeChild(element);
 }
-
-
