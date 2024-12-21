@@ -14,15 +14,69 @@ class CryptoProcessor {
     }
 
     static extractSymbols(text) {
-        // Case 1: Formatted data
+        // Case 1: Simple format (date followed by symbols)
+        if (text.match(/###\d{8}\s+[\w\s,]+/)) {
+            const allSymbols = new Set();
+            // Remove the date part and split the remaining text
+            const symbolsPart = text.replace(/###\d{8}/, '').trim();
+            
+            const symbols = symbolsPart.split(',')
+                .map(s => s.trim())
+                .filter(s => s && s.length >= 2 && /^[A-Z0-9]+$/.test(s))
+                .map(s => `BINANCE:${s}USDT.P`);
+            
+            symbols.forEach(s => {
+                allSymbols.add(s);
+                console.log(`Added symbol: ${s}`);
+            });
+            
+            console.log(`Found total ${allSymbols.size} symbols in simple format`);
+            return Array.from(allSymbols);
+        }
+
+        // Case 2: Format with score categories
+        if (text.includes('#90+') || text.includes('#80+') || text.includes('#others')) {
+            const allSymbols = new Set();
+            const lines = text.split('\n');
+            
+            for (const line of lines) {
+                // Skip empty lines and date lines
+                if (!line.trim() || line.startsWith('###')) continue;
+                
+                // If it's a category line (starts with #), skip it
+                if (line.trim().startsWith('#')) continue;
+                
+                // Process symbols in the line
+                const symbols = line.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s && s.length >= 2 && /^[A-Z0-9]+$/.test(s))
+                    .map(s => `BINANCE:${s}USDT.P`);
+                
+                symbols.forEach(s => {
+                    allSymbols.add(s);
+                    console.log(`Added symbol: ${s}`);
+                });
+            }
+            
+            console.log(`Found total ${allSymbols.size} symbols in categorized format`);
+            return Array.from(allSymbols);
+        }
+
+        // Case 3: Original formatted data
         if (text.startsWith('###')) {
             const parts = text.split(',');
             if (parts.length > 1) {
-                return parts.slice(1).filter(symbol => symbol.trim());
+                return parts.slice(1)
+                    .filter(symbol => symbol.trim())
+                    .map(symbol => {
+                        const formatted = `BINANCE:${symbol.trim()}USDT.P`;
+                        console.log(`Added symbol: ${formatted}`);
+                        return formatted;
+                    });
             }
         }
 
-        // Case 2: Unformatted data
+        // Case 4: Original unformatted data
         const lines = text.split('\n');
         let firstDate = null;
         const allSymbols = new Set();
