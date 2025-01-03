@@ -89,6 +89,17 @@ button:disabled {
     cursor: not-allowed;
 }
 
+.danger-btn {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.danger-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+
 .download-buttons {
     display: flex;
     gap: 1rem;

@@ -353,3 +353,12 @@ function downloadFile(filename, content) {
     element.click();
     document.body.removeChild(element);
 }
+
+// Add clear history functionality
+document.getElementById('clearHistory').addEventListener('click', () => {
+    if (confirm('確定要清除所有歷史記錄嗎？此操作無法復原。')) {
+        localStorage.removeItem('history');
+        history = [];
+        updateHistoryDisplay();
+    }
+});
