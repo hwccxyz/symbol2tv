@@ -1,23 +1,57 @@
 class CryptoProcessor {
     static extractDate(text) {
-        // Support two formats: 1. Format with emoji 2. ###YYYYMMDD format
+        // Support three formats: 
+        // 1. Format with emoji 
+        // 2. ###YYYYMMDD format
+        // 3. ###YYYYMMDD HH:MM format
         const emojiMatch = text.match(/(?:🗓️|🗓|:spiral_calendar_pad:)[\s\n]*(\d{8})/);
+        const hashMatchWithTime = text.match(/###(\d{8})\s+\d{2}:\d{2}/);
         const hashMatch = text.match(/###(\d{8})/);
         
         if (emojiMatch) {
             return emojiMatch[1];
+        } else if (hashMatchWithTime) {
+            return hashMatchWithTime[1];
         } else if (hashMatch) {
             return hashMatch[1];
         }
         
-        throw new Error("Invalid date format. Supported formats:\n1. 🗓️/🗓 YYYYMMDD\n2. ###YYYYMMDD");
+        throw new Error("Invalid date format. Supported formats:\n1. 🗓️/🗓 YYYYMMDD\n2. ###YYYYMMDD\n3. ###YYYYMMDD HH:MM");
     }
 
     static extractSymbols(text) {
-        // Case 1: Pre-formatted TradingView symbols
+        // Case 1: Categorized format with ###90+, ###80+, etc.
+        if (text.includes('###') && text.match(/###\d+\+/)) {
+            const lines = text.split('\n');
+            const allSymbols = [];
+            
+            for (const line of lines) {
+                // Skip empty lines, date lines, and category headers
+                if (!line.trim() || 
+                    line.match(/###\d{8}/) || 
+                    line.match(/^###(?:\d+\+|others)$/)) continue;
+                
+                // Get symbols from the line
+                const symbols = line.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s && s.startsWith('BINANCE:') && s.endsWith('USDT.P'));
+                
+                symbols.forEach(s => {
+                    if (!allSymbols.includes(s)) {
+                        allSymbols.push(s);
+                        console.log(`Added symbol: ${s}`);
+                    }
+                });
+            }
+            
+            console.log(`Found total ${allSymbols.length} symbols in categorized format`);
+            return allSymbols;
+        }
+
+        // Case 2: Pre-formatted TradingView symbols
         if (text.includes('BINANCE:') && text.includes('USDT.P')) {
             const lines = text.split('\n');
-            const allSymbols = new Set();
+            const allSymbols = [];
             
             for (const line of lines) {
                 if (!line.trim()) continue;
@@ -27,21 +61,21 @@ class CryptoProcessor {
                     .map(s => s.trim())
                     .filter(s => s && s.startsWith('BINANCE:') && s.endsWith('USDT.P'));
                 
-                if (symbols.length > 0) {
-                    symbols.forEach(s => {
-                        allSymbols.add(s);
+                symbols.forEach(s => {
+                    if (!allSymbols.includes(s)) {
+                        allSymbols.push(s);
                         console.log(`Added symbol: ${s}`);
-                    });
-                }
+                    }
+                });
             }
             
-            console.log(`Found total ${allSymbols.size} pre-formatted symbols`);
-            return Array.from(allSymbols);
+            console.log(`Found total ${allSymbols.length} pre-formatted symbols`);
+            return allSymbols;
         }
 
-        // Case 2: Formats starting with ### (Simple date format, Categorized format, Original formatted data)
+        // Case 3: Formats starting with ### (Simple date format, Categorized format, Original formatted data)
         if (text.startsWith('###')) {
-            const allSymbols = new Set();
+            const allSymbols = [];  // Changed from Set to Array
             const lines = text.split('\n');
             
             for (const line of lines) {
@@ -65,19 +99,21 @@ class CryptoProcessor {
                     .map(s => `BINANCE:${s}USDT.P`);
                 
                 symbols.forEach(s => {
-                    allSymbols.add(s);
-                    console.log(`Added symbol: ${s}`);
+                    if (!allSymbols.includes(s)) {
+                        allSymbols.push(s);
+                        console.log(`Added symbol: ${s}`);
+                    }
                 });
             }
             
-            console.log(`Found total ${allSymbols.size} symbols in ### format`);
-            return Array.from(allSymbols);
+            console.log(`Found total ${allSymbols.length} symbols in ### format`);
+            return allSymbols;
         }
 
-        // Case 3: Original unformatted data (with emoji)
+        // Case 4: Original unformatted data (with emoji)
         const lines = text.split('\n');
         let firstDate = null;
-        const allSymbols = new Set();
+        const allSymbols = [];  // Changed from Set to Array
 
         // First find the first date
         for (const line of lines) {
@@ -113,19 +149,22 @@ class CryptoProcessor {
                     pair.length >= 2 && 
                     /^[A-Z0-9]+$/.test(pair)) {
                     const formattedSymbol = `BINANCE:${pair}USDT.P`;
-                    allSymbols.add(formattedSymbol);
-                    console.log(`Added symbol: ${formattedSymbol}`);
+                    if (!allSymbols.includes(formattedSymbol)) {
+                        allSymbols.push(formattedSymbol);
+                        console.log(`Added symbol: ${formattedSymbol}`);
+                    }
                 }
             }
         }
 
         console.log(`Using date: ${firstDate}`);
-        console.log(`Found total ${allSymbols.size} symbols`);
+        console.log(`Found total ${allSymbols.length} symbols`);
         
-        return Array.from(allSymbols);
+        return allSymbols;
     }
 
     static formatOutput(date, symbols) {
+        // Remove sorting, just join the symbols with commas
         return `###${date},${symbols.join(',')}`;
     }
 
@@ -143,40 +182,72 @@ class CryptoProcessor {
             const records = this.splitMultipleRecords(inputText);
             const results = [];
             
-            // If not starting with ###, treat entire input as single record
-            if (!inputText.trim().startsWith('###')) {
+            // If input contains multiple records with ###YYYYMMDD format and pre-formatted symbols
+            if (records.length > 0 && records.every(record => 
+                record.match(/^###\d{8}/) && 
+                !record.match(/###\d+\+/) &&  // Not a categorized format
+                record.includes('BINANCE:') && 
+                record.includes('USDT.P'))) {
+                // Keep original format for each record
+                records.forEach(record => {
+                    try {
+                        const date = this.extractDate(record);
+                        // For pre-formatted records, just clean up the format
+                        const cleanedRecord = record
+                            .split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line)
+                            .join(',')
+                            .replace(/###\d{8}(?:\s+\d{2}:\d{2})?/, `###${date}`);
+                        results.push({ output: cleanedRecord, date });
+                    } catch (recordError) {
+                        console.error('Error processing record:', recordError);
+                    }
+                });
+            }
+            // Handle categorized format
+            else if (inputText.match(/###\d+\+/)) {
                 try {
                     const date = this.extractDate(inputText);
                     const symbols = this.extractSymbols(inputText);
-                    console.log('Extracted date:', date); // Debug info
-                    console.log('Extracted symbols:', symbols); // Debug info
                     
                     if (symbols && symbols.length > 0) {
                         const output = this.formatOutput(date, symbols);
                         results.push({ output, date });
                     }
                 } catch (error) {
-                    console.error('Error processing input:', error); // Debug info
+                    console.error('Error processing categorized input:', error);
+                    throw error;
+                }
+            }
+            // Handle other existing formats
+            else if (!inputText.trim().startsWith('###')) {
+                try {
+                    const date = this.extractDate(inputText);
+                    const symbols = this.extractSymbols(inputText);
+                    console.log('Extracted date:', date);
+                    console.log('Extracted symbols:', symbols);
+                    
+                    if (symbols && symbols.length > 0) {
+                        const output = this.formatOutput(date, symbols);
+                        results.push({ output, date });
+                    }
+                } catch (error) {
+                    console.error('Error processing input:', error);
                     throw error;
                 }
             } else {
-                // Handle multiple records
-                for (const record of records) {
-                    if (!record || record.trim() === '') continue;
+                // Handle single record with ### format
+                try {
+                    const date = this.extractDate(inputText);
+                    const symbols = this.extractSymbols(inputText);
                     
-                    try {
-                        const date = this.extractDate(record);
-                        const symbols = this.extractSymbols(record);
-                        
-                        if (symbols && symbols.length > 0) {
-                            // For pre-formatted TradingView symbols, keep the original format
-                            const output = record.includes('BINANCE:') ? record : this.formatOutput(date, symbols);
-                            results.push({ output, date });
-                        }
-                    } catch (recordError) {
-                        console.error('Error processing single record:', recordError);
-                        continue;
+                    if (symbols && symbols.length > 0) {
+                        const output = this.formatOutput(date, symbols);
+                        results.push({ output, date });
                     }
+                } catch (recordError) {
+                    console.error('Error processing record:', recordError);
                 }
             }
             
@@ -186,7 +257,7 @@ class CryptoProcessor {
             
             return { outputs: results, warning: "" };
         } catch (e) {
-            console.error('Error during processing:', e); // Debug info
+            console.error('Error during processing:', e);
             return { outputs: [], warning: `Error: ${e.message}` };
         }
     }
